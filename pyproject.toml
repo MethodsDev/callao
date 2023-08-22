@@ -1,0 +1,20 @@
+[build-system]
+requires = ["maturin>=1.2.3,<1.2.4"]
+build-backend = "maturin"
+
+[project]
+name = "callao"
+description = "Tools and scripts for processing Pacbio BAM files"
+requires-python = ">=3.9"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+]
+
+[tool.maturin]
+python-source = "pysrc"
+module-name = "mdl.callao._callao"
+
+[tool.ruff]
+src = ["src"]
+select = ["E", "F", "I", "A"]
