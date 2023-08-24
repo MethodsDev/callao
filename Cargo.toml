@@ -1,12 +1,16 @@
 [package]
 name = "callao"
 version = "0.1.0"
-edition = "2018"
+authors = ["James Webber <jwebber@broadinstitute.org>"]
+edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "callao"
 crate-type = ["cdylib"]
 
 [dependencies]
-pyo3 = { version = "0.15.1", features = ["extension-module"] }
+hashbrown = "0.14.0"
+log = "0.4.20"
+noodles = { version = "0.48.0", features = ["sam", "bam", "bgzf"] }
+pyo3 = { version = "0.19.2", features = ["extension-module", "hashbrown"] }
+pyo3-log = "0.8.3"
