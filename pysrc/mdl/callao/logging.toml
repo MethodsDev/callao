@@ -1,0 +1,14 @@
+version = 1
+
+[loggers]
+"" = { level = "NOTSET", handlers = [] }
+callao = { level = "DEBUG", handlers = ["console"], propagate = false }
+
+[handlers]
+console = { class = "click_log.ClickHandler", formatter = "click", level = "DEBUG" }
+
+[formatters.click]
+class = "mdl.callao.__main__.ColorFormatter"
+format = "[%(levelname)5s %(asctime)s %(name)7s] %(message)s"
+datefmt = "%Y-%m-%d %H:%M:%S"
+style = "%"

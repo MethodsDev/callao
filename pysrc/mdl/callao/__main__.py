@@ -1,10 +1,13 @@
+import importlib.resources
 import logging
+import logging.config
 import sys
 from collections import defaultdict
 from pathlib import Path
 
 import click
 import click_log
+import tomli
 
 # pyright doesn't know about our Rust module
 from ._callao import split_bam  # pyright: ignore reportMissingImports
@@ -37,15 +40,10 @@ class ColorFormatter(logging.Formatter):
         return formatted_msg
 
 
-def create_logger():
-    root_log = logging.getLogger()
-    click_log.basic_config(root_log)
-    root_log.handlers[0].setFormatter(
-        ColorFormatter(
-            "[%(levelname)5s %(asctime)s %(name)7s] %(message)s",
-            "%Y-%m-%d %H:%M:%S",
-        )
-    )
+def config_logger():
+    with importlib.resources.path("mdl.callao", "logging.toml") as log_config:
+        with log_config.open() as fh:
+            logging.config.dictConfig(tomli.load(fh))
     log.debug("Configured base logger")
 
 
@@ -87,7 +85,7 @@ def cli(
     In normal mode, only reads with an A-Q index pair will be output. When artifacts
     are included, pairs with A-A or Q-Q will be included.
     """
-    create_logger()
+    config_logger()
 
     log.debug(f"Reading barcodes from {index_fasta}")
     barcodes = []
