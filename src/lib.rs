@@ -49,8 +49,6 @@ fn make_writers(
 ///                    one file, if they point to the same value.
 #[pyfunction]
 fn split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), PathBuf>) -> PyResult<()> {
-    info!("Reading from {}", input_bam.display());
-
     const BC: [u8; 2] = [b'b', b'c'];
 
     info!("Reading from {}", input_bam.display());

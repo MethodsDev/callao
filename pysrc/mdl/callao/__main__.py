@@ -9,14 +9,39 @@ import click_log
 # pyright doesn't know about our Rust module
 from ._callao import split_bam  # pyright: ignore reportMissingImports
 
-log = logging.getLogger(__package__)
+log = logging.getLogger("callao")
+
+
+# custom version of click_log.ColorFormatter that can actually format
+class ColorFormatter(logging.Formatter):
+    colors = {
+        'error': dict(fg='red'),
+        'exception': dict(fg='red'),
+        'critical': dict(fg='red'),
+        'debug': dict(fg='blue'),
+        'warning': dict(fg='yellow'),
+        'info': dict(fg='green'),
+    }
+
+    def format(self, record):  # noqa: A003
+        formatted_msg = super().format(record)
+
+        if self._fmt.find("levelname") > -1:
+            level = record.levelname.lower()
+            formatted_msg = formatted_msg.replace(
+                record.levelname,
+                click.style(level, **self.colors[level]),
+                1,
+            )
+
+        return formatted_msg
 
 
 def create_logger():
     root_log = logging.getLogger()
     click_log.basic_config(root_log)
     root_log.handlers[0].setFormatter(
-        logging.Formatter(
+        ColorFormatter(
             "[%(levelname)5s %(asctime)s %(name)7s] %(message)s",
             "%Y-%m-%d %H:%M:%S",
         )
