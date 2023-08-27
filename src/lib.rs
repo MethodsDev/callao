@@ -51,7 +51,7 @@ fn make_writers(
 fn split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), PathBuf>) -> PyResult<()> {
     const BC: [u8; 2] = [b'b', b'c'];
 
-    info!("Reading from {}", input_bam.display());
+    info!(target: "mdl.callao", "Reading from {}", input_bam.display());
     let mut reader = File::open(input_bam).map(bam::Reader::new)?;
     let header = reader.read_header()?;
 
@@ -60,7 +60,7 @@ fn split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), PathBuf>) -> P
 
     let mut writers = make_writers(&header, output_bams)?;
 
-    debug!("Reading records from BAM");
+    debug!(target: "mdl.callao", "Reading records from BAM");
     for result in reader.records(&header) {
         let record = result?;
 
@@ -78,7 +78,7 @@ fn split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), PathBuf>) -> P
         }
     }
 
-    info!("Done");
+    info!(target: "mdl.callao", "Done");
     Ok(())
 }
 

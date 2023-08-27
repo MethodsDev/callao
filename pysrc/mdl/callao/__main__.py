@@ -9,7 +9,7 @@ import click_log
 # pyright doesn't know about our Rust module
 from ._callao import split_bam  # pyright: ignore reportMissingImports
 
-log = logging.getLogger("callao")
+log = logging.getLogger("mdl.callao")
 
 
 # custom version of click_log.ColorFormatter that can actually format

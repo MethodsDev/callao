@@ -4,6 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "callao"
+version = "0.1.0"
 description = "Tools and scripts for processing Pacbio BAM files"
 readme = "README.md"
 requires-python = ">=3.9"
