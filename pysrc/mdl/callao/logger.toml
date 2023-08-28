@@ -1,0 +1,17 @@
+version = 1
+
+[loggers]
+"" = { level = "NOTSET" }
+mdl = { level = "WARNING", handlers = ["console"], propagate = false }
+"mdl.callao" = { level = "WARNING" }
+
+[handlers.console]
+class = "mdl.log.ClickHandler"
+formatter = "click"
+level = "DEBUG"
+
+[formatters.click]
+class = "mdl.log.ColorFormatter"
+format = "[%(levelname)5s %(asctime)s %(name)7s] %(message)s"
+datefmt = "%Y-%m-%d %H:%M:%S"
+style = "%"

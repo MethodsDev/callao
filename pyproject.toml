@@ -4,6 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "callao"
+version = "0.1.0"
 description = "Tools and scripts for processing Pacbio BAM files"
 readme = "README.md"
 requires-python = ">=3.9"
@@ -12,7 +13,7 @@ classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
 ]
-dependencies = ["Click", "click_log"]
+dependencies = ["Click"]
 
 [project.scripts]
 callao = "mdl.callao.__main__:cli"

@@ -1,4 +1,3 @@
-import importlib.resources
 import logging
 import logging.config
 import sys
@@ -6,49 +5,16 @@ from collections import defaultdict
 from pathlib import Path
 
 import click
-import click_log
-import tomli
+from mdl.log import verbosity_config_option
 
 # pyright doesn't know about our Rust module
 from ._callao import split_bam  # pyright: ignore reportMissingImports
 
-log = logging.getLogger("callao")
-
-
-# custom version of click_log.ColorFormatter that can actually format
-class ColorFormatter(logging.Formatter):
-    colors = {
-        'error': dict(fg='red'),
-        'exception': dict(fg='red'),
-        'critical': dict(fg='red'),
-        'debug': dict(fg='blue'),
-        'warning': dict(fg='yellow'),
-        'info': dict(fg='green'),
-    }
-
-    def format(self, record):  # noqa: A003
-        formatted_msg = super().format(record)
-
-        if self._fmt.find("levelname") > -1:
-            level = record.levelname.lower()
-            formatted_msg = formatted_msg.replace(
-                record.levelname,
-                click.style(level, **self.colors[level]),
-                1,
-            )
-
-        return formatted_msg
-
-
-def config_logger():
-    with importlib.resources.path("mdl.callao", "logging.toml") as log_config:
-        with log_config.open() as fh:
-            logging.config.dictConfig(tomli.load(fh))
-    log.debug("Configured base logger")
+log = logging.getLogger(__package__)
 
 
 @click.command()
-@click_log.simple_verbosity_option(log, default="WARNING")
+@verbosity_config_option(log, __package__)
 @click.option(
     "--input-bam",
     type=click.Path(exists=True, path_type=Path, allow_dash=True),
@@ -85,7 +51,6 @@ def cli(
     In normal mode, only reads with an A-Q index pair will be output. When artifacts
     are included, pairs with A-A or Q-Q will be included.
     """
-    config_logger()
 
     log.debug(f"Reading barcodes from {index_fasta}")
     barcodes = []
