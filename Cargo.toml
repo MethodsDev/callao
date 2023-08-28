@@ -1,11 +1,11 @@
 [package]
-name = "callao"
+name = "mdl"
 version = "0.1.0"
 authors = ["James Webber <jwebber@broadinstitute.org>"]
 edition = "2021"
 
 [lib]
-name = "callao"
+name = "mdl"
 crate-type = ["cdylib"]
 
 [dependencies]
