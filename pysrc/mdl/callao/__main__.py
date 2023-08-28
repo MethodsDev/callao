@@ -6,8 +6,7 @@ from pathlib import Path
 import click
 import click_log
 
-# pyright doesn't know about our Rust module
-from ._callao import split_bam  # pyright: ignore reportMissingImports
+from ._callao import split_bam
 
 log = logging.getLogger("mdl.callao")
 
@@ -50,30 +49,33 @@ def create_logger():
 
 
 @click.command()
-@click_log.simple_verbosity_option(log, default="WARNING")
 @click.option(
     "--input-bam",
+    required=True,
     type=click.Path(exists=True, path_type=Path, allow_dash=True),
     help="BAM file with barcode tags from lima",
 )
 @click.option(
     "--output-stem",
+    required=True,
     type=click.Path(dir_okay=False, path_type=Path),
     help="Basename for outputs. Will append suffix per index"
 )
 @click.option(
-    "--index-fasta",
+    "--barcode-fasta",
+    required=True,
     type=click.Path(path_type=Path),
     help="fasta file of indexed adapters used for Lima",
 )
 @click.option(
     "--include-artifacts", is_flag=True, help="Include artifacts (A-A and Q-Q)"
 )
+@click_log.simple_verbosity_option(log, default="WARNING")
 @click.argument("indexes", type=int, nargs=-1)
 def cli(
     input_bam: Path,
     output_stem: Path,
-    index_fasta: Path, 
+    barcode_fasta: Path, 
     include_artifacts: bool = False,
     indexes: list[int] = None,
 ):
@@ -81,17 +83,20 @@ def cli(
     As input it needs the same fasta file that was used, to identify proper and improper
     pairs of barcodes.
 
-    Currently it supports adapter pairs like A_1 and Q_1, where A and Q are any string
-    names for the 5' and 3' adapters, and 1 is the sample index.
+    The adapter pairs should look like A_1, Q_1, A_2, Q_2, etc. where A and Q are the
+    names for the 5' and 3' adapters, and 1, 2, ... denotes the sample index.
 
-    In normal mode, only reads with an A-Q index pair will be output. When artifacts
+    In normal mode, only reads with an A-Q index pair will be written. When artifacts
     are included, pairs with A-A or Q-Q will be included.
+
+    If a series of INDEXES is provided, only those pairs will be written. Otherwise, it
+    will create a BAM for every pair in the barcode file.
     """
     create_logger()
 
-    log.debug(f"Reading barcodes from {index_fasta}")
+    log.debug(f"Reading barcodes from {barcode_fasta}")
     barcodes = []
-    with open(index_fasta) as fh:
+    with open(barcode_fasta) as fh:
         for line in fh:
             if line.startswith(">"):
                 # convert to pair of (adapter, index)
