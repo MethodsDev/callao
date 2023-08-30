@@ -41,7 +41,7 @@ def create_logger():
     click_log.basic_config(root_log)
     root_log.handlers[0].setFormatter(
         ColorFormatter(
-            "[%(levelname)5s %(asctime)s %(name)7s] %(message)s",
+            "[%(levelname)9s %(asctime)s %(name)7s] %(message)s",
             "%Y-%m-%d %H:%M:%S",
         )
     )
