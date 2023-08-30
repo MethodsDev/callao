@@ -4,8 +4,11 @@ use log::{debug, info};
 use pyo3::prelude::*;
 
 use hashbrown::{HashMap, HashSet};
-use std::fs::File;
 use std::io;
+
+use futures::TryStreamExt;
+use tokio::fs::File;
+use tokio::fs::OpenOptions;
 
 use noodles::bam;
 use noodles::bgzf;
@@ -13,32 +16,77 @@ use noodles::sam;
 use noodles::sam::record::data::field::value::Array;
 use noodles::sam::record::data::field::Value;
 
-fn make_writer(
+async fn make_writer(
     header: &sam::Header,
     output_bam: &PathBuf,
-) -> io::Result<bam::Writer<bgzf::Writer<File>>> {
-    let mut writer = bam::writer::Builder::default().build_from_path(output_bam)?;
+) -> io::Result<bam::AsyncWriter<bgzf::AsyncWriter<File>>> {
+    let file = OpenOptions::new()
+        .write(true)
+        .open(output_bam)
+        .await?;
+    let mut writer = bam::AsyncWriter::new(file);
 
-    writer.write_header(&header)?;
+    writer.write_header(&header).await?;
+    writer
+        .write_reference_sequences(header.reference_sequences())
+        .await?;
 
     Ok(writer)
 }
 
 /// creates a hashmap of BAM writers,
-fn make_writers(
+async fn make_writers(
     header: &sam::Header,
     output_bams: HashSet<PathBuf>,
-) -> io::Result<HashMap<PathBuf, bam::Writer<bgzf::Writer<File>>>> {
+) -> io::Result<HashMap<PathBuf, bam::AsyncWriter<bgzf::AsyncWriter<File>>>> {
     let mut output_writers = HashMap::new();
 
     for v in output_bams.iter() {
-        if let Ok(new_writer) = make_writer(&header, &v) {
-            output_writers.insert(v.clone(), new_writer);
-        }
+        let new_writer = make_writer(&header, &v).await?;
+        output_writers.insert(v.clone(), new_writer);
     }
 
     Ok(output_writers)
 }
+
+
+#[tokio::main]
+async fn async_split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), PathBuf>) -> PyResult<()> {
+    const BC: [u8; 2] = [b'b', b'c'];
+
+    info!("Reading from {}", input_bam.display());
+    let mut reader = File::open(input_bam).await.map(bam::AsyncReader::new)?;
+    let header = reader.read_header().await?.parse().unwrap();
+    reader.read_reference_sequences().await?;
+
+    // get a unique list of paths by collecting into a set
+    let output_bams = barcode_map.values().cloned().collect();
+
+    let mut writers = make_writers(&header, output_bams).await?;
+
+    debug!("Reading records from BAM");
+    let mut records = reader.records(&header);
+
+    while let Some(record) = records.try_next().await? {
+        if let Some(Value::Array(Array::UInt16(bc_val))) = record.data().get(&BC) {
+            if bc_val.len() != 2 {
+                debug!("bc array with length {}, that's weird!", bc_val.len());
+            } else {
+                let ij = (bc_val[0], bc_val[1]);
+                if let Some(p) = barcode_map.get(&ij) {
+                    if let Some(writer) = writers.get_mut(p) {
+                        writer.write_record(&header, &record).await?;
+                    }
+                }
+            }
+        }
+    }
+
+    info!("Done");
+    Ok(())
+}
+
+
 
 /// Splits a BAM tagged by lima, based on the barcode pairs in the bc tag
 ///
@@ -49,38 +97,10 @@ fn make_writers(
 ///                    one file, if they point to the same value.
 #[pyfunction]
 fn split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), PathBuf>) -> PyResult<()> {
-    const BC: [u8; 2] = [b'b', b'c'];
-
-    info!("Reading from {}", input_bam.display());
-    let mut reader = File::open(input_bam).map(bam::Reader::new)?;
-    let header = reader.read_header()?;
-
-    // get a unique list of paths by collecting into a set
-    let output_bams = barcode_map.values().cloned().collect();
-
-    let mut writers = make_writers(&header, output_bams)?;
-
-    debug!("Reading records from BAM");
-    for result in reader.records(&header) {
-        let record = result?;
-
-        if let Some(Value::Array(Array::UInt16(bc_val))) = record.data().get(&BC) {
-            if bc_val.len() != 2 {
-                debug!("bc array with length {}, that's weird!", bc_val.len());
-            } else {
-                let ij = (bc_val[0], bc_val[1]);
-                if let Some(p) = barcode_map.get(&ij) {
-                    if let Some(writer) = writers.get_mut(p) {
-                        writer.write_record(&header, &record)?;
-                    }
-                }
-            }
-        }
-    }
-
-    info!("Done");
-    Ok(())
+ 
+   async_split_bam(input_bam, barcode_map)
 }
+
 
 /// Rust module to split a Lima BAM by different indexes
 #[pymodule]
