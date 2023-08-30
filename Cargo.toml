@@ -10,7 +10,15 @@ crate-type = ["cdylib"]
 
 [dependencies]
 hashbrown = "0.14.0"
+futures = { version = "0.3.28", default-features = false, features = ["std"] }
 log = "0.4.20"
-noodles = { version = "0.48.0", features = ["sam", "bam", "bgzf"] }
+noodles = { version = "0.49.0", features = ["sam", "bam", "bgzf"] }
+noodles-bam = { version = "0.43.0", features = ["async"] }
 pyo3 = { version = "0.19.2", features = ["extension-module", "hashbrown"] }
 pyo3-log = "0.8.3"
+tokio = { version = "1.31.0", features = [
+    "fs",
+    "io-std",
+    "macros",
+    "rt-multi-thread",
+] }
