@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use log::{debug, info};
+use log::{debug, info, warn};
 use pyo3::prelude::*;
 
 use hashbrown::{HashMap, HashSet};
@@ -58,6 +58,12 @@ async fn async_split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), Pa
     let mut reader = File::open(input_bam).await.map(bam::AsyncReader::new)?;
     let header = reader.read_header().await?.parse().unwrap();
     reader.read_reference_sequences().await?;
+
+    // check that lima was run on this file, otherwise it won't have the bc tag
+    // (or it will but they'll be something else)
+    if !header.programs().contains_key("lima") {
+        warn!("lima not found in BAM header, callao may not work properly!");
+    }
 
     // get a unique list of paths by collecting into a set
     let output_bams = barcode_map.values().cloned().collect();
