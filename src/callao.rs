@@ -1,29 +1,20 @@
+use std::io;
 use std::path::PathBuf;
 
-use log::{debug, info, warn};
 use pyo3::prelude::*;
 
-use hashbrown::{HashMap, HashSet};
-use std::io;
-
 use futures::TryStreamExt;
-use tokio::fs::File;
-use tokio::fs::OpenOptions;
-
-use noodles::bam;
-use noodles::bgzf;
-use noodles::sam;
-use noodles::sam::record::data::field::value::Array;
-use noodles::sam::record::data::field::Value;
+use hashbrown::{HashMap, HashSet};
+use log::{debug, info, warn};
+use noodles::sam::record::data::field::{value::Array, Value};
+use noodles::{bam, bgzf, sam};
+use tokio::fs::{File, OpenOptions};
 
 async fn make_writer(
     header: &sam::Header,
     output_bam: &PathBuf,
 ) -> io::Result<bam::AsyncWriter<bgzf::AsyncWriter<File>>> {
-    let file = OpenOptions::new()
-        .write(true)
-        .open(output_bam)
-        .await?;
+    let file = OpenOptions::new().write(true).open(output_bam).await?;
     let mut writer = bam::AsyncWriter::new(file);
 
     writer.write_header(&header).await?;
@@ -49,9 +40,11 @@ async fn make_writers(
     Ok(output_writers)
 }
 
-
 #[tokio::main]
-async fn async_split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), PathBuf>) -> PyResult<()> {
+async fn async_split_bam(
+    input_bam: PathBuf,
+    barcode_map: HashMap<(u16, u16), PathBuf>,
+) -> PyResult<()> {
     const BC: [u8; 2] = [b'b', b'c'];
 
     info!("Reading from {}", input_bam.display());
@@ -92,8 +85,6 @@ async fn async_split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), Pa
     Ok(())
 }
 
-
-
 /// Splits a BAM tagged by lima, based on the barcode pairs in the bc tag
 ///
 /// ## Arguments
@@ -103,9 +94,8 @@ async fn async_split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), Pa
 ///                    one file, if they point to the same value.
 #[pyfunction]
 fn split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), PathBuf>) -> PyResult<()> {
-   async_split_bam(input_bam, barcode_map)
+    async_split_bam(input_bam, barcode_map)
 }
-
 
 /// Rust module to split a Lima BAM by different indexes
 #[pymodule]
