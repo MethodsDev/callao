@@ -56,7 +56,7 @@ async fn async_split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), Pa
 
     info!("Reading from {}", input_bam.display());
     let mut reader = File::open(input_bam).await.map(bam::AsyncReader::new)?;
-    let header = reader.read_header().await?.parse().unwrap();
+    let header: sam::Header = reader.read_header().await?.parse().unwrap();
     reader.read_reference_sequences().await?;
 
     // check that lima was run on this file, otherwise it won't have the bc tag
@@ -103,7 +103,6 @@ async fn async_split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), Pa
 ///                    one file, if they point to the same value.
 #[pyfunction]
 fn split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), PathBuf>) -> PyResult<()> {
- 
    async_split_bam(input_bam, barcode_map)
 }
 
