@@ -53,6 +53,10 @@ async fn async_split_bam(
         }
     }
 
+    for writer in writers.values_mut() {
+        writer.shutdown().await?;
+    }
+
     info!("Done");
     Ok(())
 }
