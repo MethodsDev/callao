@@ -1,44 +1,16 @@
-use std::io;
+
 use std::path::PathBuf;
 
 use pyo3::prelude::*;
 
 use futures::TryStreamExt;
-use hashbrown::{HashMap, HashSet};
+use hashbrown::HashMap;
 use log::{debug, info, warn};
 use noodles::sam::record::data::field::{value::Array, Value};
-use noodles::{bam, bgzf, sam};
-use tokio::fs::{File, OpenOptions};
+use noodles::{bam, sam};
+use tokio::fs::File;
 
-async fn make_writer(
-    header: &sam::Header,
-    output_bam: &PathBuf,
-) -> io::Result<bam::AsyncWriter<bgzf::AsyncWriter<File>>> {
-    let file = OpenOptions::new().write(true).open(output_bam).await?;
-    let mut writer = bam::AsyncWriter::new(file);
-
-    writer.write_header(&header).await?;
-    writer
-        .write_reference_sequences(header.reference_sequences())
-        .await?;
-
-    Ok(writer)
-}
-
-/// creates a hashmap of BAM writers,
-async fn make_writers(
-    header: &sam::Header,
-    output_bams: HashSet<PathBuf>,
-) -> io::Result<HashMap<PathBuf, bam::AsyncWriter<bgzf::AsyncWriter<File>>>> {
-    let mut output_writers = HashMap::new();
-
-    for v in output_bams.iter() {
-        let new_writer = make_writer(&header, &v).await?;
-        output_writers.insert(v.clone(), new_writer);
-    }
-
-    Ok(output_writers)
-}
+use crate::io::make_writers;
 
 #[tokio::main]
 async fn async_split_bam(
