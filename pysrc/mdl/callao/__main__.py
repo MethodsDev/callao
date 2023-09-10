@@ -1,5 +1,4 @@
 import logging
-import logging.config
 import sys
 from collections import defaultdict
 from pathlib import Path
@@ -13,7 +12,6 @@ log = logging.getLogger(__package__)
 
 
 @click.command()
-@verbosity_config_option(log, __package__)
 @click.option(
     "--input-bam",
     required=True,
@@ -35,7 +33,7 @@ log = logging.getLogger(__package__)
 @click.option(
     "--include-artifacts", is_flag=True, help="Include artifacts (A-A and Q-Q)"
 )
-@click_log.simple_verbosity_option(log, default="WARNING")
+@verbosity_config_option(log, __package__)
 @click.argument("indexes", type=int, nargs=-1)
 def cli(
     input_bam: Path,
