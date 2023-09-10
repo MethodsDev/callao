@@ -13,7 +13,7 @@ classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",
 ]
-dependencies = ["Click"]
+dependencies = ["Click", "mdl-core"]
 
 [project.scripts]
 callao = "mdl.callao.__main__:cli"
