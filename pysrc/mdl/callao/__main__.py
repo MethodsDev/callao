@@ -4,48 +4,11 @@ from collections import defaultdict
 from pathlib import Path
 
 import click
-import click_log
+from mdl.log import verbosity_config_option
 
 from ._callao import split_bam
 
-log = logging.getLogger("mdl.callao")
-
-
-# custom version of click_log.ColorFormatter that can actually format
-class ColorFormatter(logging.Formatter):
-    colors = {
-        'error': dict(fg='red'),
-        'exception': dict(fg='red'),
-        'critical': dict(fg='red'),
-        'debug': dict(fg='blue'),
-        'warning': dict(fg='yellow'),
-        'info': dict(fg='green'),
-    }
-
-    def format(self, record):  # noqa: A003
-        formatted_msg = super().format(record)
-
-        if self._fmt.find("levelname") > -1:
-            level = record.levelname.lower()
-            formatted_msg = formatted_msg.replace(
-                record.levelname,
-                click.style(level, **self.colors[level]),
-                1,
-            )
-
-        return formatted_msg
-
-
-def create_logger():
-    root_log = logging.getLogger()
-    click_log.basic_config(root_log)
-    root_log.handlers[0].setFormatter(
-        ColorFormatter(
-            "[%(levelname)9s %(asctime)s %(name)7s] %(message)s",
-            "%Y-%m-%d %H:%M:%S",
-        )
-    )
-    log.debug("Configured base logger")
+log = logging.getLogger(__package__)
 
 
 @click.command()
@@ -70,7 +33,7 @@ def create_logger():
 @click.option(
     "--include-artifacts", is_flag=True, help="Include artifacts (A-A and Q-Q)"
 )
-@click_log.simple_verbosity_option(log, default="WARNING")
+@verbosity_config_option(log, __package__)
 @click.argument("indexes", type=int, nargs=-1)
 def cli(
     input_bam: Path,
@@ -92,7 +55,6 @@ def cli(
     If a series of INDEXES is provided, only those pairs will be written. Otherwise, it
     will create a BAM for every pair in the barcode file.
     """
-    create_logger()
 
     log.debug(f"Reading barcodes from {barcode_fasta}")
     barcodes = []
