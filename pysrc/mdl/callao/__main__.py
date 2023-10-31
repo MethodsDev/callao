@@ -22,7 +22,7 @@ log = logging.getLogger(__package__)
     "--output-stem",
     required=True,
     type=click.Path(dir_okay=False, path_type=Path),
-    help="Basename for outputs. Will append suffix per index"
+    help="Basename for outputs. Will append suffix per index",
 )
 @click.option(
     "--barcode-fasta",
@@ -38,7 +38,7 @@ log = logging.getLogger(__package__)
 def cli(
     input_bam: Path,
     output_stem: Path,
-    barcode_fasta: Path, 
+    barcode_fasta: Path,
     include_artifacts: bool = False,
     indexes: list[int] = None,
 ):
@@ -70,7 +70,7 @@ def cli(
     except ValueError as exc:
         log.error(
             "Failed to extract indexes from barcode names. Is this the right file?",
-            exc_info=exc
+            exc_info=exc,
         )
         sys.exit(1)
 
@@ -104,6 +104,6 @@ def cli(
     if include_artifacts:
         for i, (bc, ix) in enumerate(barcodes):
             if ix in include_set:
-                bc_mapping[i, i] = output_bams[ix]    
+                bc_mapping[i, i] = output_bams[ix]
 
     split_bam(input_bam, bc_mapping)

@@ -13,6 +13,7 @@ classifiers = [
     "Programming Language :: Python :: Implementation :: CPython",
 ]
 dependencies = ["Click", "mdl-core"]
+optional-dependencies = { dev = ["pre-commit", "ruff"] }
 dynamic = ["version"]
 
 [project.scripts]
@@ -26,3 +27,4 @@ sdist-include = ["pysrc/mdl/callao/logging.toml"]
 [tool.ruff]
 src = ["src"]
 select = ["E", "F", "I", "A"]
+ignore = ["E501"]
