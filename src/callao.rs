@@ -1,31 +1,70 @@
-use std::convert::TryInto;
 use std::path::PathBuf;
-
-use pyo3::prelude::*;
 
 use futures::TryStreamExt;
 use hashbrown::HashMap;
 use log::{debug, info, warn};
 use noodles::sam::alignment::record::data::field::{value::Array, Value};
+use noodles::sam::header::record::value::{
+    map::{Program, Tag},
+    Map,
+};
+use pyo3::prelude::*;
 
 use crate::io::{make_reader, make_writers};
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
 #[tokio::main]
 async fn async_split_bam(
+    cli_cmd: String,
     input_bam: PathBuf,
-    barcode_map: HashMap<[u16; 2], PathBuf>,
+    barcode_map: HashMap<Vec<u16>, PathBuf>,
 ) -> PyResult<()> {
     const LIMA: &[u8; 4] = b"lima";
     const BC: [u8; 2] = [b'b', b'c'];
 
     info!("Reading from {}", input_bam.display());
-    let (mut reader, header) = make_reader(&input_bam).await?;
+    let (mut reader, mut header) = make_reader(&input_bam).await?;
 
     // check that lima was run on this file, otherwise it won't have the bc tag
     // (or it will but they'll be something else)
     if !header.programs().contains_key(&LIMA[..]) {
         warn!("lima not found in BAM header, callao may not work properly!");
     }
+
+    let pn = match Tag::try_from([b'P', b'N']) {
+        Ok(Tag::Other(tag)) => tag,
+        _ => unreachable!(),
+    };
+    let vn = match Tag::try_from([b'V', b'N']) {
+        Ok(Tag::Other(tag)) => tag,
+        _ => unreachable!(),
+    };
+    let pp = match Tag::try_from([b'P', b'P']) {
+        Ok(Tag::Other(tag)) => tag,
+        _ => unreachable!(),
+    };
+    let cl = match Tag::try_from([b'C', b'L']) {
+        Ok(Tag::Other(tag)) => tag,
+        _ => unreachable!(),
+    };
+
+    let program = Map::<Program>::builder().insert(pn, "callao");
+
+    let program = if let Some(last_pg) = header.programs().iter().last() {
+        program.insert(pp, last_pg.0.clone())
+    } else {
+        program
+    };
+
+    let program = program
+        .insert(vn, VERSION)
+        .insert(cl, cli_cmd)
+        .build()
+        .unwrap();
+    header
+        .programs_mut()
+        .insert(String::from("callao").into(), program);
 
     // get a unique list of paths by collecting into a set
     let output_bams = barcode_map.values().cloned().collect();
@@ -37,16 +76,10 @@ async fn async_split_bam(
 
     while let Some(record) = records.try_next().await? {
         if let Some(Ok(Value::Array(Array::UInt16(bc_val)))) = record.data().get(&BC) {
+            let bc_val: Vec<_> = bc_val.iter().filter_map(|s| s.ok()).collect();
             if bc_val.len() != 2 {
                 debug!("bc array with length {}, that's weird!", bc_val.len());
             } else {
-                let bc_val: [u16; 2] = bc_val
-                    .iter()
-                    .filter_map(|s| s.ok())
-                    .collect::<Vec<_>>()
-                    .try_into()
-                    .unwrap();
-
                 if let Some(p) = barcode_map.get(&bc_val) {
                     if let Some(writer) = writers.get_mut(p) {
                         writer.write_record(&header, &record).await?;
@@ -67,13 +100,18 @@ async fn async_split_bam(
 /// Splits a BAM tagged by lima, based on the barcode pairs in the bc tag
 ///
 /// ## Arguments
+///  * `cli_cmd` - the command string used to invoke callao, to add to the headers
 ///  * `input_bam` - a BAM file, with index values in the `bc` tag (0-indexed)
 ///  * `barcode_map` - a mapping from barcode pair (i, j) to the BAM path those
 ///                    records should be written to. Multiple pairs can be written to
 ///                    one file, if they point to the same value.
 #[pyfunction]
-fn split_bam(input_bam: PathBuf, barcode_map: HashMap<[u16; 2], PathBuf>) -> PyResult<()> {
-    async_split_bam(input_bam, barcode_map)
+fn split_bam(
+    cli_cmd: String,
+    input_bam: PathBuf,
+    barcode_map: HashMap<Vec<u16>, PathBuf>,
+) -> PyResult<()> {
+    async_split_bam(cli_cmd, input_bam, barcode_map)
 }
 
 /// Rust module to split a Lima BAM by different indexes
