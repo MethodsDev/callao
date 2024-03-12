@@ -1,3 +1,4 @@
+use std::convert::TryInto;
 use std::path::PathBuf;
 
 use pyo3::prelude::*;
@@ -5,15 +6,16 @@ use pyo3::prelude::*;
 use futures::TryStreamExt;
 use hashbrown::HashMap;
 use log::{debug, info, warn};
-use noodles::sam::record::data::field::{value::Array, Value};
+use noodles::sam::alignment::record::data::field::{value::Array, Value};
 
 use crate::io::{make_reader, make_writers};
 
 #[tokio::main]
 async fn async_split_bam(
     input_bam: PathBuf,
-    barcode_map: HashMap<(u16, u16), PathBuf>,
+    barcode_map: HashMap<[u16; 2], PathBuf>,
 ) -> PyResult<()> {
+    const LIMA: &[u8; 4] = b"lima";
     const BC: [u8; 2] = [b'b', b'c'];
 
     info!("Reading from {}", input_bam.display());
@@ -21,7 +23,7 @@ async fn async_split_bam(
 
     // check that lima was run on this file, otherwise it won't have the bc tag
     // (or it will but they'll be something else)
-    if !header.programs().contains_key("lima") {
+    if !header.programs().contains_key(&LIMA[..]) {
         warn!("lima not found in BAM header, callao may not work properly!");
     }
 
@@ -31,15 +33,21 @@ async fn async_split_bam(
     let mut writers = make_writers(&header, output_bams).await?;
 
     debug!("Reading records from BAM");
-    let mut records = reader.records(&header);
+    let mut records = reader.records();
 
     while let Some(record) = records.try_next().await? {
-        if let Some(Value::Array(Array::UInt16(bc_val))) = record.data().get(&BC) {
+        if let Some(Ok(Value::Array(Array::UInt16(bc_val)))) = record.data().get(&BC) {
             if bc_val.len() != 2 {
                 debug!("bc array with length {}, that's weird!", bc_val.len());
             } else {
-                let ij = (bc_val[0], bc_val[1]);
-                if let Some(p) = barcode_map.get(&ij) {
+                let bc_val: [u16; 2] = bc_val
+                    .iter()
+                    .filter_map(|s| s.ok())
+                    .collect::<Vec<_>>()
+                    .try_into()
+                    .unwrap();
+
+                if let Some(p) = barcode_map.get(&bc_val) {
                     if let Some(writer) = writers.get_mut(p) {
                         writer.write_record(&header, &record).await?;
                     }
@@ -64,7 +72,7 @@ async fn async_split_bam(
 ///                    records should be written to. Multiple pairs can be written to
 ///                    one file, if they point to the same value.
 #[pyfunction]
-fn split_bam(input_bam: PathBuf, barcode_map: HashMap<(u16, u16), PathBuf>) -> PyResult<()> {
+fn split_bam(input_bam: PathBuf, barcode_map: HashMap<[u16; 2], PathBuf>) -> PyResult<()> {
     async_split_bam(input_bam, barcode_map)
 }
 

@@ -9,8 +9,7 @@ pub(crate) async fn make_reader(
     input_bam: &PathBuf,
 ) -> io::Result<(bam::AsyncReader<bgzf::AsyncReader<File>>, sam::Header)> {
     let mut reader = File::open(input_bam).await.map(bam::AsyncReader::new)?;
-    let header = reader.read_header().await?.parse().unwrap();
-    reader.read_reference_sequences().await?;
+    let header = reader.read_header().await?;
 
     Ok((reader, header))
 }
@@ -27,9 +26,6 @@ pub(crate) async fn make_writer(
     let mut writer = bam::AsyncWriter::new(file);
 
     writer.write_header(&header).await?;
-    writer
-        .write_reference_sequences(header.reference_sequences())
-        .await?;
 
     Ok(writer)
 }
