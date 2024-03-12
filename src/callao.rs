@@ -4,15 +4,10 @@ use futures::TryStreamExt;
 use hashbrown::HashMap;
 use log::{debug, info, warn};
 use noodles::sam::alignment::record::data::field::{value::Array, Value};
-use noodles::sam::header::record::value::{
-    map::{Program, Tag},
-    Map,
-};
+
 use pyo3::prelude::*;
 
 use crate::io::{make_reader, make_writers};
-
-const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[tokio::main]
 async fn async_split_bam(
@@ -24,47 +19,13 @@ async fn async_split_bam(
     const BC: [u8; 2] = [b'b', b'c'];
 
     info!("Reading from {}", input_bam.display());
-    let (mut reader, mut header) = make_reader(&input_bam).await?;
+    let (mut reader, header) = make_reader(cli_cmd, &input_bam).await?;
 
     // check that lima was run on this file, otherwise it won't have the bc tag
     // (or it will but they'll be something else)
     if !header.programs().contains_key(&LIMA[..]) {
         warn!("lima not found in BAM header, callao may not work properly!");
     }
-
-    let pn = match Tag::try_from([b'P', b'N']) {
-        Ok(Tag::Other(tag)) => tag,
-        _ => unreachable!(),
-    };
-    let vn = match Tag::try_from([b'V', b'N']) {
-        Ok(Tag::Other(tag)) => tag,
-        _ => unreachable!(),
-    };
-    let pp = match Tag::try_from([b'P', b'P']) {
-        Ok(Tag::Other(tag)) => tag,
-        _ => unreachable!(),
-    };
-    let cl = match Tag::try_from([b'C', b'L']) {
-        Ok(Tag::Other(tag)) => tag,
-        _ => unreachable!(),
-    };
-
-    let program = Map::<Program>::builder().insert(pn, "callao");
-
-    let program = if let Some(last_pg) = header.programs().iter().last() {
-        program.insert(pp, last_pg.0.clone())
-    } else {
-        program
-    };
-
-    let program = program
-        .insert(vn, VERSION)
-        .insert(cl, cli_cmd)
-        .build()
-        .unwrap();
-    header
-        .programs_mut()
-        .insert(String::from("callao").into(), program);
 
     // get a unique list of paths by collecting into a set
     let output_bams = barcode_map.values().cloned().collect();
