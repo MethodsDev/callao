@@ -2,7 +2,7 @@ use std::path::PathBuf;
 
 use hashbrown::{HashMap, HashSet};
 use noodles::sam::header::record::value::{
-    map::{Program, Tag},
+    map::{program::tag, Program},
     Map,
 };
 use noodles::{bam, bgzf, sam};
@@ -13,39 +13,21 @@ const NAME: &str = "callao";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 fn add_pg(cli_cmd: String, header: &mut sam::Header) -> () {
-    let pn = match Tag::try_from([b'P', b'N']) {
-        Ok(Tag::Other(tag)) => tag,
-        _ => unreachable!(),
-    };
-    let vn = match Tag::try_from([b'V', b'N']) {
-        Ok(Tag::Other(tag)) => tag,
-        _ => unreachable!(),
-    };
-    let pp = match Tag::try_from([b'P', b'P']) {
-        Ok(Tag::Other(tag)) => tag,
-        _ => unreachable!(),
-    };
-    let cl = match Tag::try_from([b'C', b'L']) {
-        Ok(Tag::Other(tag)) => tag,
-        _ => unreachable!(),
-    };
+    let program = Map::<Program>::builder().insert(tag::NAME, NAME);
 
-    let program = Map::<Program>::builder().insert(pn, NAME);
-
-    let program = if let Some(last_pg) = header.programs().iter().last() {
-        program.insert(pp, last_pg.0.clone())
+    // note: this is not guaranteed to be correct
+    let program = if let Some(last_pg) = header.programs().keys().last() {
+        program.insert(tag::PREVIOUS_PROGRAM_ID, last_pg.clone())
     } else {
         program
     };
 
     let program = program
-        .insert(vn, VERSION)
-        .insert(cl, cli_cmd)
+        .insert(tag::VERSION, VERSION)
+        .insert(tag::COMMAND_LINE, cli_cmd)
         .build()
         .unwrap();
-    header
-        .programs_mut()
-        .insert(String::from("callao").into(), program);
+    header.programs_mut().insert(NAME.into(), program);
 }
 
 pub(crate) async fn make_reader(
