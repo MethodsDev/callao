@@ -1,21 +1,45 @@
+use std::collections::{HashMap, HashSet};
 use std::path::PathBuf;
 
-use hashbrown::{HashMap, HashSet};
+use noodles::sam::header::record::value::{
+    map::{program::tag, Program},
+    Map,
+};
 use noodles::{bam, bgzf, sam};
 use tokio::fs::{File, OpenOptions};
 use tokio::io;
+
+const NAME: &str = "callao";
+const VERSION: &str = env!("CARGO_PKG_VERSION");
+
+pub(crate) fn add_program_tag(cli_cmd: String, header: &mut sam::Header) -> () {
+    let program = Map::<Program>::builder().insert(tag::NAME, NAME);
+
+    // note: this is not guaranteed to be the correct program ID, but should be ok
+    let program = if let Some(last_pg) = header.programs().keys().last() {
+        program.insert(tag::PREVIOUS_PROGRAM_ID, last_pg.clone())
+    } else {
+        program
+    };
+
+    let program = program
+        .insert(tag::VERSION, VERSION)
+        .insert(tag::COMMAND_LINE, cli_cmd)
+        .build()
+        .unwrap();
+    header.programs_mut().insert(NAME.into(), program);
+}
 
 pub(crate) async fn make_reader(
     input_bam: &PathBuf,
 ) -> io::Result<(bam::AsyncReader<bgzf::AsyncReader<File>>, sam::Header)> {
     let mut reader = File::open(input_bam).await.map(bam::AsyncReader::new)?;
-    let header = reader.read_header().await?.parse().unwrap();
-    reader.read_reference_sequences().await?;
+    let header = reader.read_header().await?;
 
     Ok((reader, header))
 }
 
-pub(crate) async fn make_writer(
+async fn make_writer(
     header: &sam::Header,
     output_bam: &PathBuf,
 ) -> io::Result<bam::AsyncWriter<bgzf::AsyncWriter<File>>> {
@@ -27,9 +51,6 @@ pub(crate) async fn make_writer(
     let mut writer = bam::AsyncWriter::new(file);
 
     writer.write_header(&header).await?;
-    writer
-        .write_reference_sequences(header.reference_sequences())
-        .await?;
 
     Ok(writer)
 }

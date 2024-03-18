@@ -56,6 +56,8 @@ def cli(
     will create a BAM for every pair in the barcode file.
     """
 
+    cli_cmd = f"callao {' '.join(sys.argv[1:])}"
+    log.debug(f"Invoked with: {cli_cmd}")
     log.debug(f"Reading barcodes from {barcode_fasta}")
     barcodes = []
     with open(barcode_fasta) as fh:
@@ -106,4 +108,4 @@ def cli(
             if ix in include_set:
                 bc_mapping[i, i] = output_bams[ix]
 
-    split_bam(input_bam, bc_mapping)
+    split_bam(cli_cmd, input_bam, bc_mapping)
