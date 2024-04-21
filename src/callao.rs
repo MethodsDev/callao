@@ -79,7 +79,7 @@ fn split_bam(
 /// Rust module to split a Lima BAM by different indexes
 #[pymodule]
 #[pyo3(name = "_callao")]
-fn callao(_py: Python, m: &PyModule) -> PyResult<()> {
+fn callao(m: &Bound<'_, PyModule>) -> PyResult<()> {
     pyo3_log::init();
 
     m.add_function(wrap_pyfunction!(split_bam, m)?)?;
