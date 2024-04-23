@@ -13,14 +13,15 @@ const NAME: &str = "callao";
 const VERSION: &str = env!("CARGO_PKG_VERSION");
 
 pub(crate) fn add_program_tag(cli_cmd: String, header: &mut sam::Header) -> io::Result<()> {
-    let program = Map::<Program>::builder()
+    match Map::<Program>::builder()
         .insert(tag::NAME, NAME)
         .insert(tag::VERSION, VERSION)
         .insert(tag::COMMAND_LINE, cli_cmd)
         .build()
-        .unwrap();
-
-    header.programs_mut().add(NAME, program)
+    {
+        Ok(program) => header.programs_mut().add(NAME, program),
+        Err(build_err) => Err(io::Error::new(io::ErrorKind::Other, build_err)),
+    }
 }
 
 pub(crate) async fn make_reader(
