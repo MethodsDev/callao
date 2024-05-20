@@ -20,13 +20,15 @@ async fn async_split_bam(
 
     info!("Reading from {}", input_bam.display());
     let (mut reader, mut header) = make_reader(&input_bam).await?;
-    add_program_tag(cli_cmd, &mut header);
 
     // check that lima was run on this file, otherwise it won't have the bc tag
-    // (or it will but they'll be something else)
-    if !header.programs().contains_key(&LIMA[..]) {
+    // (or it will, but the tag will be for something else)
+    if !header.programs().as_ref().contains_key(&LIMA[..]) {
         warn!("lima not found in BAM header, callao may not work properly!");
     }
+
+    // add an entry to the header for callao
+    add_program_tag(cli_cmd, &mut header)?;
 
     // get a unique list of paths by collecting into a set
     let output_bams = barcode_map.values().cloned().collect();
