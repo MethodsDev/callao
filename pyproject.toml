@@ -22,7 +22,7 @@ callao = "mdl.callao.__main__:cli"
 [tool.maturin]
 python-source = "pysrc"
 module-name = "mdl.callao._callao"
-sdist-include = ["pysrc/mdl/callao/logging.toml"]
+sdist-include = ["pysrc/mdl/callao/logger.toml"]
 
 [tool.ruff]
 src = ["src"]
