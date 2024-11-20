@@ -1,3 +1,4 @@
+import importlib.metadata
 import logging
 import sys
 from collections import defaultdict
@@ -8,6 +9,7 @@ from mdl.log import verbosity_config_option
 
 from ._callao import split_bam
 
+__version__ = importlib.metadata.version("callao")
 log = logging.getLogger(__package__)
 
 
@@ -34,6 +36,7 @@ log = logging.getLogger(__package__)
     "--include-artifacts", is_flag=True, help="Include artifacts (A-A and Q-Q)"
 )
 @verbosity_config_option(log, __package__)
+@click.version_option(__version__)
 @click.argument("indexes", type=int, nargs=-1)
 def cli(
     input_bam: Path,
