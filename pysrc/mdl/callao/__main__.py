@@ -35,7 +35,7 @@ log = logging.getLogger(__package__)
 @click.option(
     "--include-artifacts", is_flag=True, help="Include artifacts (A-A and Q-Q)"
 )
-@verbosity_config_option(log, __package__)
+@verbosity_config_option(log, "mdl.log")
 @click.version_option(__version__)
 @click.argument("indexes", type=int, nargs=-1)
 def cli(

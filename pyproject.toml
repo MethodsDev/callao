@@ -1,5 +1,5 @@
 [build-system]
-requires = ["maturin>=1.2.3,<1.2.4"]
+requires = ["maturin>=1.2,<2.0"]
 build-backend = "maturin"
 
 [project]
@@ -22,7 +22,6 @@ callao = "mdl.callao.__main__:cli"
 [tool.maturin]
 python-source = "pysrc"
 module-name = "mdl.callao._callao"
-sdist-include = ["pysrc/mdl/callao/logger.toml"]
 
 [tool.ruff]
 src = ["src"]
